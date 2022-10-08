@@ -20,11 +20,21 @@ func indexHandler(res http.ResponseWriter, req *http.Request, _ httprouter.Param
 	}
 }
 
+func appointmentsHandler(res http.ResponseWriter, req *http.Request, params httprouter.Params) {
+	res.Write([]byte(fmt.Sprintf("<h1>Appointments for trainer: %v </h1>", params.ByName("id"))))
+}
+
+func appointmentsPostHandler(res http.ResponseWriter, req *http.Request, _ httprouter.Params) {
+	res.Write([]byte("<h1>Post successful!</h1>"))
+}
+
 func main() {
 	fmt.Println("Hello World!")
 	//mux := http.NewServeMux()
 	//mux.HandleFunc("/", indexHandler)
 	router := httprouter.New()
 	router.GET("/", indexHandler)
+	router.GET("/appointments/:id", appointmentsHandler)
+	router.POST("/appointments", appointmentsPostHandler)
 	log.Fatal(http.ListenAndServe(":8081", router))
 }
