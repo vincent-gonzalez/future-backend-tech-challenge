@@ -351,8 +351,8 @@ func main() {
 	loadStartingData()
 	router := httprouter.New()
 	router.GET("/", indexHandler)
-	router.GET("/appointments/:id", appointmentsHandler)
+	router.GET("/appointments", appointmentsHandler)
 	router.POST("/appointments", appointmentsPostHandler)
-	router.GET("/trainers/appointments?starts_at=:startsAt;ends_at=:endsAt", trainerAppointmentsHandler)
+	router.GET("/trainers/:id/appointments", trainerAppointmentsHandler)
 	log.Fatal(http.ListenAndServe(":8081", router))
 }
