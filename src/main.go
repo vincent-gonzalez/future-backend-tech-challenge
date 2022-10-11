@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
@@ -16,7 +15,11 @@ import (
 
 var database *sql.DB
 
-func checkIfAppointmentTimeIsAvailable(trainer_id int, start_time string, ends_at string) bool {
+func convertDateTimeToRFC3339(dateTime string) string {
+	temp, _ := time.Parse("2006-01-02 15:04:05-07:00", dateTime)
+	return temp.Format(time.RFC3339)
+}
+func checkIfAppointmentTimeIsAvailable(trainer_id uint, start_time string, ends_at string) bool {
 	var appointment Appointment
 	err := database.QueryRow(`SELECT * FROM appointments
 	WHERE trainer_id = ? AND starts_at = ? AND ends_at = ?`,
@@ -24,8 +27,9 @@ func checkIfAppointmentTimeIsAvailable(trainer_id int, start_time string, ends_a
 	if err != nil {
 		if err == sql.ErrNoRows {
 			return true
+		} else {
+			return false // some other error
 		}
-		return false // some other error
 	}
 
 	return false // an appointment matching the criteria was found
