@@ -31,6 +31,10 @@ func appointmentsPostHandler(res http.ResponseWriter, req *http.Request, _ httpr
 	res.Write([]byte("<h1>Post successful!</h1>"))
 }
 
+func trainerAppointmentsHandler(res http.ResponseWriter, req *http.Request, _ httprouter.Params) {
+	
+}
+
 func initDB() error {
 	os.Remove("../db/api-test-sqlite.db")
 
@@ -65,5 +69,6 @@ func main() {
 	router.GET("/", indexHandler)
 	router.GET("/appointments/:id", appointmentsHandler)
 	router.POST("/appointments", appointmentsPostHandler)
+	router.GET("/trainers/appointments?starts_at=:startsAt;ends_at=:endsAt", trainerAppointmentsHandler)
 	log.Fatal(http.ListenAndServe(":8081", router))
 }
