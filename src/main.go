@@ -84,8 +84,36 @@ func appointmentsPostHandler(res http.ResponseWriter, req *http.Request, _ httpr
 	res.Write([]byte("<h1>Post successful!</h1>"))
 }
 
-func trainerAppointmentsHandler(res http.ResponseWriter, req *http.Request, _ httprouter.Params) {
-	
+func loadStartingData() {
+	startingData, err := os.ReadFile("./appointments.json")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	var startingAppointments []Appointment
+	err = json.Unmarshal(startingData, &startingAppointments)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	insertSQL := `INSERT INTO appointments(id, trainer_id, user_id, starts_at, ends_at) VALUES (?, ?, ?, ?, ?)`
+	statement, err := database.Prepare(insertSQL)
+	if err != nil {
+		log.Println(err)
+		return
+	}
+
+	for _, appointment := range startingAppointments {
+		startsAtUtcTime, err := time.Parse(time.RFC3339, appointment.AppointmentTime.StartsAt)
+		endsAtUtcTime, err := time.Parse(time.RFC3339, appointment.AppointmentTime.EndsAt)
+		// log.Println(appointment.AppointmentTime.StartsAt)
+		// log.Println(startsAtUtcTime)
+		// log.Println(appointment)
+		_, err = statement.Exec(appointment.Id, appointment.TrainerId, appointment.UserId, startsAtUtcTime, endsAtUtcTime)
+		if err != nil {
+			log.Println(err)
+		}
+	}
 }
 
 func initDB() error {
@@ -128,6 +156,7 @@ func main() {
 	if err != nil {
 		log.Panicln(err)
 	}
+	loadStartingData()
 	router := httprouter.New()
 	router.GET("/", indexHandler)
 	router.GET("/appointments/:id", appointmentsHandler)
