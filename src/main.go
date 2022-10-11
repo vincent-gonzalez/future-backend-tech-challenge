@@ -44,6 +44,13 @@ func indexHandler(res http.ResponseWriter, req *http.Request, _ httprouter.Param
 }
 
 func appointmentsHandler(res http.ResponseWriter, req *http.Request, params httprouter.Params) {
+	trainerId := params.ByName("id")
+	if len(trainerId) < 1 {
+		// return 400
+	}
+	// use trainer id to query data store
+	// marshal list of appointments to json
+	// return
 	res.Write([]byte(fmt.Sprintf("<h1>Appointments for trainer: %v </h1>", params.ByName("id"))))
 }
 
