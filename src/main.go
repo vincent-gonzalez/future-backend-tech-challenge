@@ -89,35 +89,45 @@ func trainerAppointmentsHandler(res http.ResponseWriter, req *http.Request, _ ht
 }
 
 func initDB() error {
-	os.Remove("../db/api-test-sqlite.db")
+	os.Remove("./db/api-test-sqlite.db")
 
-	file, err := os.Create("../db/api-test-sqlite.db")
+	file, err := os.Create("./db/api-test-sqlite.db")
 	if err != nil {
+		log.Fatal(err)
 		return err
 	}
 	defer file.Close()
 
-	database, err = sql.Open("sqlite3", "../db/api-test-sqlite.db")
-	defer database.Close()
+	database, err = sql.Open("sqlite3", "./db/api-test-sqlite.db")
+	if err != nil {
+		log.Fatal(err)
+		return err
+	}
+	//defer database.Close()
 
 	createTableSQL := `CREATE TABLE appointments (
-	"id" integer NOT NULL PRIMARY KEY AUTOINCREMENT
-	"trainer_id" integer
-	"user_id" integer
-	"starts_at" datetime
-	"ends_at" datetime);`
+	"id" integer NOT NULL PRIMARY KEY AUTOINCREMENT,
+	"trainer_id" integer,
+	"user_id" integer,
+	"starts_at" integer,
+	"ends_at" integer);`
 	statement, err := database.Prepare(createTableSQL)
 	if err != nil {
-		//
+		log.Fatal(err)
+		return err
 	}
 	statement.Exec()
-
+	return nil
 }
 
 func main() {
 	fmt.Println("Hello World!")
 	//mux := http.NewServeMux()
 	//mux.HandleFunc("/", indexHandler)
+	err := initDB()
+	if err != nil {
+		log.Panicln(err)
+	}
 	router := httprouter.New()
 	router.GET("/", indexHandler)
 	router.GET("/appointments/:id", appointmentsHandler)
