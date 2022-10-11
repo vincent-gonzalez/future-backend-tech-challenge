@@ -84,6 +84,83 @@ func appointmentsPostHandler(res http.ResponseWriter, req *http.Request, _ httpr
 	res.Write([]byte("<h1>Post successful!</h1>"))
 }
 
+func trainerAppointmentsHandler(res http.ResponseWriter, req *http.Request, params httprouter.Params) {
+	trainerId := params.ByName("id")
+	if len(trainerId) < 1 {
+		// return 400
+		responseStatus := Response{
+			Status: "fail",
+		}
+		readError := &ErrorResponse{
+			Response: responseStatus,
+			Message: "Trainer ID is required",
+		}
+		errorJSON, _ := json.Marshal(readError)
+		res.WriteHeader(400)
+		res.Write([]byte(errorJSON))
+		return
+	}
+
+	rows, err := database.Query(`SELECT * FROM appointments WHERE trainer_id = ?`, trainerId)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer rows.Close()
+	var trainerAppointments []Appointment
+	for rows.Next() {
+		var appointment Appointment
+		if err := rows.Scan(
+			&appointment.Id,
+			&appointment.TrainerId,
+			&appointment.UserId,
+			&appointment.AppointmentTime.StartsAt,
+			&appointment.AppointmentTime.EndsAt,
+			); err != nil {
+				responseStatus := Response{
+					Status: "error",
+				}
+				readError := &ErrorResponse{
+					Response: responseStatus,
+					Message: err.Error(),
+				}
+				errorJSON, _ := json.Marshal(readError)
+				res.WriteHeader(500)
+				res.Write([]byte(errorJSON))
+				return
+			}
+		appointment.AppointmentTime.StartsAt = convertDateTimeToRFC3339(appointment.AppointmentTime.StartsAt)
+		appointment.AppointmentTime.EndsAt = convertDateTimeToRFC3339(appointment.AppointmentTime.EndsAt)
+		trainerAppointments = append(trainerAppointments, appointment)
+	}
+	if err = rows.Err(); err != nil {
+		rowError := &ErrorResponse{
+			Response: Response{
+				Status: "error",
+			},
+			Message: err.Error(),
+		}
+		errorJSON, _ := json.Marshal(rowError)
+		res.WriteHeader(500)
+		res.Write([]byte(errorJSON))
+		return
+	}
+	// marshal list of appointments to json
+	if trainerAppointments == nil || len(trainerAppointments) < 1 {
+		trainerAppointments = make([]Appointment, 0)
+	}
+	responseBody := &DataResponse{
+		Response: Response{
+			Status: "success",
+		},
+		Data: trainerAppointments,
+	}
+	responseBodyJSON, _ := json.Marshal(responseBody)
+
+	res.Header().Set("Content-Type", "application/json")
+	res.WriteHeader(200)
+	res.Write([]byte(responseBodyJSON))
+}
+
 func loadStartingData() {
 	startingData, err := os.ReadFile("./appointments.json")
 	if err != nil {
