@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/julienschmidt/httprouter"
 	_ "github.com/mattn/go-sqlite3"
@@ -33,6 +34,42 @@ func checkIfAppointmentTimeIsAvailable(trainer_id uint, start_time string, ends_
 	}
 
 	return false // an appointment matching the criteria was found
+}
+
+func findTrainerAvailability(scheduledAppointments []AppointmentTime, startDateTime string, endDateTime string) []AppointmentTime {
+	unavailableAppointments := make(map[int64]bool, len(scheduledAppointments))
+
+	for _, appointment := range scheduledAppointments {
+		key, _ := time.Parse(time.RFC3339, appointment.StartsAt)
+		log.Println("scheduled app st " + appointment.StartsAt)
+		log.Println("scheduled app key " + key.String())
+		log.Println("scheduled app " + fmt.Sprint(key.Unix()))
+		unavailableAppointments[key.Unix()] = true
+	}
+
+	startTime, _ := time.Parse(time.RFC3339, startDateTime)
+	endTime, _ := time.Parse(time.RFC3339, endDateTime)
+	var availableAppointments []AppointmentTime
+	for currentTime := startTime; !currentTime.After(endTime); currentTime = currentTime.Add(time.Minute * 30) {
+		log.Println("curr time" + fmt.Sprint(currentTime.Unix()))
+		if _, ok := unavailableAppointments[currentTime.Unix()]; !ok {
+			log.Println("time is available")
+			openTimeslotEnd := currentTime.Add(time.Minute * 30)
+			openTimeslot := AppointmentTime{
+				StartsAt: currentTime.Format(time.RFC3339),
+				EndsAt: openTimeslotEnd.Format(time.RFC3339),
+			}
+			availableAppointments = append(availableAppointments, openTimeslot)
+		}
+
+		if currentTime.Hour() >= 16 && currentTime.Minute() >= 30 {
+			log.Println("moving to next day")
+			location, _ := time.LoadLocation("America/Los_Angeles")
+			currentTime = time.Date(currentTime.Year(), currentTime.Month(), currentTime.Day() + 1, 7, 30, 0, 0, location)
+		}
+	}
+
+	return availableAppointments
 }
 
 func indexHandler(res http.ResponseWriter, req *http.Request, _ httprouter.Params) {
