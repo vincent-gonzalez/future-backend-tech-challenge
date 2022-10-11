@@ -85,14 +85,88 @@ func indexHandler(res http.ResponseWriter, req *http.Request, _ httprouter.Param
 }
 
 func appointmentsHandler(res http.ResponseWriter, req *http.Request, params httprouter.Params) {
-	trainerId := params.ByName("id")
-	if len(trainerId) < 1 {
-		// return 400
+	trainerId := req.URL.Query().Get("trainer_id") // params.ByName("id")
+	// if len(trainerId) < 1 {
+	// 	// return 400
+	// 	responseStatus := Response{
+	// 		Status: "fail",
+	// 	}
+	// 	readError := &ErrorResponse{
+	// 		Response: responseStatus,
+	// 		Message: "Trainer ID is required",
+	// 	}
+	// 	errorJSON, _ := json.Marshal(readError)
+	// 	res.WriteHeader(400)
+	// 	res.Write([]byte(errorJSON))
+	// 	return
+	// }
+	startsAtDate := req.URL.Query().Get("starts_at")
+	endsAtDate := req.URL.Query().Get("ends_at")
+	startsAtUtcTime, err := time.Parse(time.RFC3339, startsAtDate)
+	endsAtUtcTime, err := time.Parse(time.RFC3339, endsAtDate)
+
+	rows, err := database.Query(`SELECT starts_at, ends_at FROM appointments
+	 WHERE trainer_id = ? AND starts_at >= ? AND ends_at <= ?`,
+	trainerId, startsAtUtcTime, endsAtUtcTime)
+	if err != nil {
+		log.Fatal(err.Error())
 	}
-	// use trainer id to query data store
+	defer rows.Close()
+	var appointments []AppointmentTime
+	for rows.Next() {
+		var appointment AppointmentTime
+		if err := rows.Scan(
+			&appointment.StartsAt,
+			&appointment.EndsAt,
+			); err != nil {
+				responseStatus := Response{
+					Status: "error",
+				}
+				readError := &ErrorResponse{
+					Response: responseStatus,
+					Message: err.Error(),
+				}
+				errorJSON, _ := json.Marshal(readError)
+				res.WriteHeader(500)
+				res.Write([]byte(errorJSON))
+				return
+			}
+			log.Println(appointment)
+		appointment.StartsAt = convertDateTimeToRFC3339(appointment.StartsAt)
+		appointment.EndsAt = convertDateTimeToRFC3339(appointment.EndsAt)
+		appointments = append(appointments, appointment)
+	}
+	if err = rows.Err(); err != nil {
+		rowError := &ErrorResponse{
+			Response: Response{
+				Status: "error",
+			},
+			Message: err.Error(),
+		}
+		errorJSON, _ := json.Marshal(rowError)
+		res.WriteHeader(500)
+		res.Write([]byte(errorJSON))
+		return
+	}
 	// marshal list of appointments to json
+	availableAppointments := findTrainerAvailability(appointments, startsAtDate, endsAtDate)
+	// send an empty list instead of nil/null
+	if availableAppointments == nil || len(availableAppointments) < 1 {
+		availableAppointments = make([]AppointmentTime, 0)
+	}
+	responseBody := &DataResponse{
+		Response: Response{
+			Status: "success",
+		},
+		Data: availableAppointments,
+	}
+	responseBodyJSON, _ := json.Marshal(responseBody)
+	res.Header().Set("Content-Type", "application/json")
+	res.WriteHeader(200)
+
+	res.Write([]byte(responseBodyJSON))
 	// return
-	res.Write([]byte(fmt.Sprintf("<h1>Appointments for trainer: %v </h1>", params.ByName("id"))))
+	//res.Write([]byte(fmt.Sprintf("<h1>Appointments for trainer: %v </h1>", params.ByName("id"))))
 }
 
 func appointmentsPostHandler(res http.ResponseWriter, req *http.Request, _ httprouter.Params) {
