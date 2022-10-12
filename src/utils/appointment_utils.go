@@ -1,44 +1,9 @@
 package utils
 
 import (
-	// "database/sql"
-	// "log"
-	"time"
-
 	"github.com/vincent-gonzalez/future-backend-homework-project/src/types"
-	// "github.com/vincent-gonzalez/future-backend-homework-project/src/models"
-
-	_ "github.com/mattn/go-sqlite3"
+	"time"
 )
-
-// func CheckIfAppointmentTimeIsAvailable(trainer_id uint, start_time string, ends_at string) bool {
-// 	var err error
-// 	startTime, err := time.Parse(time.RFC3339, start_time)
-// 	if err != nil {
-// 		log.Println(err)
-// 		return false // we can't proceed without a properly formatted date
-// 	}
-// 	endTime, err := time.Parse(time.RFC3339, ends_at)
-// 	if err != nil {
-// 		log.Println(err)
-// 		return false // we can't proceed without a properly formatted date
-// 	}
-
-// 	// err = database.QueryRow(`SELECT id FROM appointments
-// 	// WHERE trainer_id = ? AND starts_at = ? AND ends_at = ?`,
-// 	// 	trainer_id, startTime, endTime).Scan(&appointment.Id)
-// 	_, err = models.GetAppointmentByTrainerAndDate(trainer_id, startTime, endTime)
-// 	if err != nil {
-// 		if err == sql.ErrNoRows {
-// 			return true // no existing appointments were found
-// 		} else {
-// 			log.Println(err)
-// 			return false // some other error
-// 		}
-// 	}
-
-// 	return false // an appointment matching the criteria was found
-// }
 
 func FindTrainerAvailability(scheduledAppointments []types.AppointmentTime, startDateTime string, endDateTime string) []types.AppointmentTime {
 	unavailableAppointments := make(map[int64]bool, len(scheduledAppointments))

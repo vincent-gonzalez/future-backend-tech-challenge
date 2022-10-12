@@ -10,6 +10,3 @@ buildRun: build run
 
 run:
 	./$(BUILD-DIR)/$(EXE-NAME)
-
-test:
-	cd ./$(SOURCE-DIR); go test

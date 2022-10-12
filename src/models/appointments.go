@@ -81,7 +81,7 @@ func GetAppointmentByTrainerAndDate(trainerId uint, startsAt time.Time, endsAt t
 	WHERE trainer_id = ? AND starts_at = ? AND ends_at = ?`,
 		trainerId, startsAt, endsAt).Scan(&appointment.Id)
 	log.Println(appointment)
-		return appointment, err
+	return appointment, err
 }
 
 func GetTrainerAppointments(trainerId string) ([]types.Appointment, error) {
@@ -118,7 +118,8 @@ func GetTrainerAppointments(trainerId string) ([]types.Appointment, error) {
 }
 
 func InsertAppointment(appointment types.Appointment) (uint, error) {
-	insertSQL := `INSERT INTO appointments(trainer_id, user_id, starts_at, ends_at) VALUES (?, ?, ?, ?)`
+	insertSQL := `INSERT INTO appointments(trainer_id, user_id, starts_at, ends_at)
+	 VALUES (?, ?, ?, ?)`
 	statement, err := database.Prepare(insertSQL)
 	if err != nil {
 		return 0, err
@@ -148,6 +149,8 @@ func IsAppointmentTimeAvailable(trainer_id uint, startsAt string, endsAt string)
 		return false // we can't proceed without a properly formatted date
 	}
 
+	// the return value is irrelevant since we can see if a row was returned
+	// or not from sql.ErrNoRows
 	_, err = GetAppointmentByTrainerAndDate(trainer_id, startTime, endTime)
 	if err != nil {
 		if err == sql.ErrNoRows {

@@ -1,7 +1,6 @@
 package main
 
 import (
-	"database/sql"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -12,60 +11,24 @@ import (
 	"time"
 
 	"github.com/vincent-gonzalez/future-backend-homework-project/src/middleware"
-	"github.com/vincent-gonzalez/future-backend-homework-project/src/types"
 	"github.com/vincent-gonzalez/future-backend-homework-project/src/models"
+	"github.com/vincent-gonzalez/future-backend-homework-project/src/types"
 	"github.com/vincent-gonzalez/future-backend-homework-project/src/utils"
 
 	"github.com/julienschmidt/httprouter"
 	_ "github.com/mattn/go-sqlite3"
 )
 
-// const datetime_format_without_t = "2006-01-02 15:04:05-07:00"
-
-var database *sql.DB
-
+// getAvailableAppointmentsHandler returns a list of available appointment
+// times for a trainer between two dates
 func getAvailableAppointmentsHandler(res http.ResponseWriter, req *http.Request, params httprouter.Params) {
 	trainerId := req.URL.Query().Get("trainer_id")
 	startsAtDate := req.URL.Query().Get("starts_at")
 	endsAtDate := req.URL.Query().Get("ends_at")
 
-	startsAtUtcTime,_ := time.Parse(time.RFC3339, startsAtDate)
-	endsAtUtcTime,_ := time.Parse(time.RFC3339, endsAtDate)
-	//log.Println(startsAtUtcTime)
-	// get the trainer's currently scheduled appointments
-	// rows, err := database.Query(`SELECT starts_at, ends_at FROM appointments
-	//  WHERE trainer_id = ? AND starts_at >= ? AND ends_at <= ?`,
-	// 	trainerId, startsAtUtcTime, endsAtUtcTime)
-	// if err != nil {
-	// 	log.Println(err)
-	// 	WriteErrorResponse(res, "failed while retrieving appointment record data", http.StatusInternalServerError)
-	// 	return
-	// }
-	// defer rows.Close()
+	startsAtUtcTime, _ := time.Parse(time.RFC3339, startsAtDate)
+	endsAtUtcTime, _ := time.Parse(time.RFC3339, endsAtDate)
 
-	// // iterate over scheduled appointments
-	// var appointments []types.AppointmentTime
-	// for rows.Next() {
-	// 	var appointment types.AppointmentTime
-	// 	if err := rows.Scan(
-	// 		&appointment.StartsAt,
-	// 		&appointment.EndsAt,
-	// 	); err != nil {
-	// 		log.Println(err)
-	// 		WriteErrorResponse(res, "failed while reading available appointments data", http.StatusInternalServerError)
-	// 		return
-	// 	}
-
-	// 	appointment.StartsAt = ConvertDateTimeToRFC3339(appointment.StartsAt, datetime_format_without_t)
-	// 	appointment.EndsAt = ConvertDateTimeToRFC3339(appointment.EndsAt, datetime_format_without_t)
-	// 	appointments = append(appointments, appointment)
-	// }
-
-	// if err = rows.Err(); err != nil {
-	// 	log.Panicln(err)
-	// 	WriteErrorResponse(res, "failed while processing available appointments", http.StatusInternalServerError)
-	// 	return
-	// }
 	appointments, err := models.GetScheduledAppointmentsBetweenDates(trainerId, startsAtUtcTime, endsAtUtcTime)
 	if err != nil {
 		log.Println(err)
@@ -82,6 +45,7 @@ func getAvailableAppointmentsHandler(res http.ResponseWriter, req *http.Request,
 	utils.WriteDataResponse(res, "success", availableAppointments, http.StatusOK)
 }
 
+// postAppointmentHandler inserts a new appointment into the database
 func postAppointmentHandler(res http.ResponseWriter, req *http.Request, _ httprouter.Params) {
 	requestBody, err := io.ReadAll(io.LimitReader(req.Body, 1048576))
 	if err != nil {
@@ -125,7 +89,6 @@ func postAppointmentHandler(res http.ResponseWriter, req *http.Request, _ httpro
 		},
 	}
 
-	// isAvailable := utils.CheckIfAppointmentTimeIsAvailable(newAppointment.TrainerId, newAppointment.StartsAt, newAppointment.EndsAt)
 	isAvailable := models.IsAppointmentTimeAvailable(newAppointment.TrainerId, newAppointment.StartsAt, newAppointment.EndsAt)
 	if !isAvailable {
 		responseData := struct {
@@ -137,26 +100,6 @@ func postAppointmentHandler(res http.ResponseWriter, req *http.Request, _ httpro
 		return
 	}
 
-	// // save request into DB
-	// insertSQL := `INSERT INTO appointments(trainer_id, user_id, starts_at, ends_at) VALUES (?, ?, ?, ?)`
-	// statement, err := database.Prepare(insertSQL)
-	// if err != nil {
-	// 	log.Println(err)
-	// 	utils.WriteErrorResponse(res, "failed while creating new appointment", http.StatusInternalServerError)
-	// 	return
-	// }
-
-	// startsAt, _ := time.Parse(time.RFC3339, appointment.StartsAt)
-	// endsAt, _ := time.Parse(time.RFC3339, appointment.EndsAt)
-
-	// insertResult, err := statement.Exec(appointment.TrainerId, appointment.UserId, startsAt, endsAt)
-	// if err != nil {
-	// 	log.Println(err)
-	// 	utils.WriteErrorResponse(res, "failed while creating new appointment", http.StatusInternalServerError)
-	// 	return
-	// }
-	// newAppointmentId, _ := insertResult.LastInsertId()
-	// newAppointment.Id = uint(newAppointmentId)
 	newAppointment.Id, err = models.InsertAppointment(*newAppointment)
 	if err != nil {
 		log.Println(err)
@@ -167,47 +110,13 @@ func postAppointmentHandler(res http.ResponseWriter, req *http.Request, _ httpro
 	utils.WriteDataResponse(res, "success", newAppointment, http.StatusCreated)
 }
 
+// getTrainerAppointmentsHandler returns a list of scheduled appointments for a trainer
 func getTrainerAppointmentsHandler(res http.ResponseWriter, req *http.Request, params httprouter.Params) {
 	trainerId := params.ByName("id")
 	if len(trainerId) < 1 {
 		utils.WriteErrorResponse(res, "trainer_id is required", http.StatusBadRequest)
 		return
 	}
-
-	// rows, err := database.Query(`SELECT * FROM appointments WHERE trainer_id = ?`, trainerId)
-	// if err != nil {
-	// 	log.Println(err)
-	// 	utils.WriteErrorResponse(res, "failed to find appointments", http.StatusInternalServerError)
-	// 	return
-	// }
-	// defer rows.Close()
-
-	// iterate over result rows and create appointment instances from row data
-	// var trainerAppointments []types.Appointment
-	// for rows.Next() {
-	// 	var appointment types.Appointment
-	// 	if err := rows.Scan(
-	// 		&appointment.Id,
-	// 		&appointment.TrainerId,
-	// 		&appointment.UserId,
-	// 		&appointment.StartsAt,
-	// 		&appointment.EndsAt,
-	// 	); err != nil {
-	// 		log.Println(err)
-	// 		utils.WriteErrorResponse(res, "failed while reading appointment record data", http.StatusInternalServerError)
-	// 		return
-	// 	}
-
-	// 	appointment.AppointmentTime.StartsAt = utils.ConvertDateTimeToRFC3339(appointment.AppointmentTime.StartsAt, datetime_format_without_t)
-	// 	appointment.AppointmentTime.EndsAt = utils.ConvertDateTimeToRFC3339(appointment.AppointmentTime.EndsAt, datetime_format_without_t)
-	// 	trainerAppointments = append(trainerAppointments, appointment)
-	// }
-
-	// if err = rows.Err(); err != nil {
-	// 	log.Println(err)
-	// 	utils.WriteErrorResponse(res, "failed while reading appointment record data", http.StatusInternalServerError)
-	// 	return
-	// }
 
 	trainerAppointments, err := models.GetTrainerAppointments(trainerId)
 	if err != nil {
@@ -236,20 +145,12 @@ func loadStartingData() error {
 		return fmt.Errorf("failed to unmarshal starting appointment JSON. %w", err)
 	}
 
-	// insertSQL := `INSERT INTO appointments(id, trainer_id, user_id, starts_at, ends_at) VALUES (?, ?, ?, ?, ?)`
-	// statement, err := database.Prepare(insertSQL)
-	// if err != nil {
-	// 	return fmt.Errorf("unable to prepare insert statement for starting data. %w", err)
-	// }
 	for _, appointment := range startingAppointments {
 		startsAtUtcTime, _ := time.Parse(time.RFC3339, appointment.AppointmentTime.StartsAt)
 		endsAtUtcTime, _ := time.Parse(time.RFC3339, appointment.AppointmentTime.EndsAt)
 		appointment.AppointmentTime.StartsAt = startsAtUtcTime.Format(time.RFC3339)
 		appointment.AppointmentTime.EndsAt = endsAtUtcTime.Format(time.RFC3339)
-		// _, err = statement.Exec(appointment.Id, appointment.TrainerId, appointment.UserId, startsAtUtcTime, endsAtUtcTime)
-		// if err != nil {
-		// 	log.Printf("Failed to save in DB starting appointment with ID: %v", appointment.Id)
-		// }
+
 		_, err = models.InsertAppointment(appointment)
 		if err != nil {
 			log.Printf("Failed to save in DB starting appointment with ID: %v", appointment.Id)
@@ -259,43 +160,10 @@ func loadStartingData() error {
 	return nil
 }
 
-// func initializeDatabase() error {
-// 	os.Remove("./db/api-test-sqlite.db")
-
-// 	file, err := os.Create("./db/api-test-sqlite.db")
-// 	if err != nil {
-// 		return fmt.Errorf("unable to create test database. %w", err)
-// 	}
-// 	defer file.Close()
-
-// 	database, err = sql.Open("sqlite3", "./db/api-test-sqlite.db")
-// 	if err != nil {
-// 		return fmt.Errorf("unable to open test database. %w", err)
-// 	}
-
-// 	createTableSQL := `CREATE TABLE appointments (
-// 	"id" integer NOT NULL PRIMARY KEY AUTOINCREMENT,
-// 	"trainer_id" integer,
-// 	"user_id" integer,
-// 	"starts_at" integer,
-// 	"ends_at" integer);`
-// 	statement, err := database.Prepare(createTableSQL)
-// 	if err != nil {
-// 		return fmt.Errorf("unable to create appointments table. %w", err)
-// 	}
-// 	statement.Exec()
-
-// 	return nil
-// }
-
 func main() {
 	var err error
 	fmt.Println("Starting API server...")
 
-	// err = initializeDatabase()
-	// if err != nil {
-	// 	log.Fatalln(err)
-	// }
 	err = models.InitDB()
 	if err != nil {
 		log.Fatalln(err)

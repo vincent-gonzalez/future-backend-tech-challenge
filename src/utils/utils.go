@@ -2,9 +2,9 @@ package utils
 
 import (
 	"encoding/json"
+	"github.com/vincent-gonzalez/future-backend-homework-project/src/types"
 	"net/http"
 	"time"
-	"github.com/vincent-gonzalez/future-backend-homework-project/src/types"
 )
 
 const Datetime_format_without_t = "2006-01-02 15:04:05-07:00"
@@ -26,6 +26,6 @@ func WriteDataResponse(w http.ResponseWriter, status string, data interface{}, r
 }
 
 func WriteErrorResponse(w http.ResponseWriter, errorMessage string, errorCode int) {
-		errorResponse := types.CreateErrorResponse(errorMessage)
-		writeResponse(w, errorResponse, errorCode)
+	errorResponse := types.CreateErrorResponse(errorMessage)
+	writeResponse(w, errorResponse, errorCode)
 }
