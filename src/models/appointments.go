@@ -80,7 +80,6 @@ func GetAppointmentByTrainerAndDate(trainerId uint, startsAt time.Time, endsAt t
 	err := database.QueryRow(`SELECT id FROM appointments
 	WHERE trainer_id = ? AND starts_at = ? AND ends_at = ?`,
 		trainerId, startsAt, endsAt).Scan(&appointment.Id)
-	log.Println(appointment)
 	return appointment, err
 }
 
