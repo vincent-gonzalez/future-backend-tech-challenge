@@ -1,6 +1,6 @@
-package main
+package types
 
 type AppointmentTime struct {
 	StartsAt string `json:"started_at"`
-	EndsAt string `json:"ended_at"`
+	EndsAt   string `json:"ended_at"`
 }
