@@ -135,3 +135,28 @@ func InsertAppointment(appointment types.Appointment) (uint, error) {
 	newAppointmentId, _ := insertResult.LastInsertId()
 	return uint(newAppointmentId), nil
 }
+
+func IsAppointmentTimeAvailable(trainer_id uint, startsAt string, endsAt string) bool {
+	var err error
+
+	startTime, err := time.Parse(time.RFC3339, startsAt)
+	if err != nil {
+		return false // we can't proceed without a properly formatted date
+	}
+	endTime, err := time.Parse(time.RFC3339, endsAt)
+	if err != nil {
+		return false // we can't proceed without a properly formatted date
+	}
+
+	_, err = GetAppointmentByTrainerAndDate(trainer_id, startTime, endTime)
+	if err != nil {
+		if err == sql.ErrNoRows {
+			return true // no existing appointments were found
+		} else {
+			log.Println(err)
+			return false // some other error
+		}
+	}
+
+	return false // an appointment matching the criteria was found
+}
